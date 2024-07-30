@@ -62,12 +62,15 @@ const TgaFooter = struct {
 const TgaExtensionArea = struct {};
 const TgaDeveloperAreay = struct {};
 
-const Pixel = u24;
-
+const Pixel = struct {
+    b: u8,
+    g: u8,
+    r: u8,
+};
 fn make_rect(width: u16, height: u16) ![]Pixel {
     const rect = try std.heap.page_allocator.alloc(Pixel, width * height);
     for (rect) |*pixel| {
-        pixel.* = 0x0000FF; // This will appear as red in TGA format (BGR)
+        pixel.* = Pixel{ .b = 0xFF, .g = 0x00, .r = 0x00 }; // Red in BGR format
     }
     return rect;
 }
@@ -75,7 +78,6 @@ fn make_rect(width: u16, height: u16) ![]Pixel {
 pub fn main() !void {
     const image_width: u16 = 200;
     const image_height: u16 = 200;
-    const bits_per_pixel: u8 = 24;
     const rectangle = try make_rect(image_width, image_height);
     defer std.heap.page_allocator.free(rectangle);
 
@@ -84,7 +86,7 @@ pub fn main() !void {
         .y_origin = 0,
         .image_width = image_width,
         .image_height = image_height,
-        .pixel_depth = bits_per_pixel,
+        .pixel_depth = 24,
         .image_descriptor = 0,
     };
 
@@ -104,7 +106,9 @@ pub fn main() !void {
 
     const tga_footer = TgaFooter.init();
 
-    const tga_file = try std.fs.cwd().createFile("rect.tga", .{ .read = true });
+    const tga_file = try std.fs.cwd().createFile("rect.tga", .{
+        .read = true,
+    });
     defer tga_file.close();
 
     const writer = tga_file.writer();
