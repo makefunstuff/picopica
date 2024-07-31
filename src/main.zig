@@ -8,7 +8,6 @@ const TgaFooter = tga.TgaFooter;
 const TgaHeader = tga.TgaHeader;
 const TgaImageSpec = tga.TgaImageSpec;
 const TgaImageData = tga.TgaImageData;
-const Allocator = mem.Allocator;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -16,10 +15,17 @@ pub fn main() !void {
     const image_height: u16 = 200;
     const bits_per_pixel: u8 = 24;
     const peach_color: u32 = 0x98A1FF;
-    const rectangle = try drawing.fill_canvas(@as(u32, image_width), @as(u32, image_height), @as(u32, bits_per_pixel), peach_color, allocator);
 
-    defer std.heap.page_allocator.free(rectangle);
+    const bytes_per_pixel = @as(u32, @intCast(bits_per_pixel)) / 8;
+    const total_pixels = image_width * image_height;
+    const total_bytes = total_pixels * bytes_per_pixel;
 
+    var canvas = try allocator.alloc(u8, total_bytes);
+    try drawing.fill_canvas(&canvas, peach_color);
+
+    defer std.heap.page_allocator.free(canvas);
+
+    // TODO: make it less verbose
     const image_spec = TgaImageSpec{
         .x_origin = 0,
         .y_origin = 0,
@@ -40,7 +46,7 @@ pub fn main() !void {
     const tga_image_data = TgaImageData{
         .image_id = null,
         .color_map_data = null,
-        .image_data = std.mem.sliceAsBytes(rectangle),
+        .image_data = std.mem.sliceAsBytes(canvas),
     };
 
     const tga_footer = TgaFooter.init();
