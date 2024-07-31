@@ -1,33 +1,14 @@
 const std = @import("std");
+const tga = @import("tga.zig");
+const drawing = @import("drawing.zig");
+
 const testing = std.testing;
 const mem = std.mem;
-const tga = @import("tga.zig");
 const TgaFooter = tga.TgaFooter;
 const TgaHeader = tga.TgaHeader;
 const TgaImageSpec = tga.TgaImageSpec;
 const TgaImageData = tga.TgaImageData;
 const Allocator = mem.Allocator;
-
-fn make_rect(width: u32, height: u32, bits_per_pixel: u32, color: u32, allocator: Allocator) ![]u8 {
-    const bytes_per_pixel = bits_per_pixel / 8;
-    const total_pixels = width * height;
-    const total_bytes = total_pixels * bytes_per_pixel;
-
-    const rect = try allocator.alloc(u8, total_bytes);
-
-    var pixel_index: usize = 0;
-    while (pixel_index < total_bytes) : (pixel_index += bytes_per_pixel) {
-        rect[pixel_index] = @as(u8, @intCast(color & 0xFF));
-        rect[pixel_index + 1] = @as(u8, @intCast((color >> 8) & 0xFF));
-        rect[pixel_index + 2] = @as(u8, @intCast((color >> 16) & 0xFF));
-
-        if (bytes_per_pixel > 3) {
-            rect[pixel_index + 3] = 0; // Alpha channel or padding
-        }
-    }
-
-    return rect;
-}
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -35,7 +16,7 @@ pub fn main() !void {
     const image_height: u16 = 200;
     const bits_per_pixel: u8 = 24;
     const peach_color: u32 = 0x98A1FF;
-    const rectangle = try make_rect(@as(u32, image_width), @as(u32, image_height), @as(u32, bits_per_pixel), peach_color, allocator);
+    const rectangle = try drawing.fill_canvas(@as(u32, image_width), @as(u32, image_height), @as(u32, bits_per_pixel), peach_color, allocator);
 
     defer std.heap.page_allocator.free(rectangle);
 
