@@ -6,24 +6,34 @@ const TgaFooter = tga.TgaFooter;
 const TgaHeader = tga.TgaHeader;
 const TgaImageSpec = tga.TgaImageSpec;
 const TgaImageData = tga.TgaImageData;
+const Allocator = mem.Allocator;
 
-const Pixel = struct {
-    b: u8,
-    g: u8,
-    r: u8,
-};
-fn make_rect(width: u16, height: u16) ![]Pixel {
-    const rect = try std.heap.page_allocator.alloc(Pixel, width * height);
-    for (rect) |*pixel| {
-        pixel.* = Pixel{ .b = 0xFF, .g = 0x00, .r = 0x00 }; // Red in BGR format
+fn make_rect(width: u32, height: u32, bits_per_pixel: u32, allocator: Allocator) ![]u8 {
+    const bytes_per_pixel = bits_per_pixel / 8;
+    const total_pixels = width * height;
+    const total_bytes = total_pixels * bytes_per_pixel;
+
+    const rect = try allocator.alloc(u8, total_bytes);
+
+    const red_color: u32 = 0x0000FF; // Red in BGR format, stored as 0x00BBGGRR
+
+    var pixel_index: usize = 0;
+    while (pixel_index < total_bytes) : (pixel_index += bytes_per_pixel) {
+        rect[pixel_index] = @as(u8, red_color & 0xFF); // Blue channel
+        rect[pixel_index + 1] = @as(u8, (red_color >> 8) & 0xFF); // Green channel
+        rect[pixel_index + 2] = @as(u8, (red_color >> 16) & 0xFF); // Red channel
     }
+
     return rect;
 }
 
 pub fn main() !void {
+    const allocator = std.heap.page_allocator;
     const image_width: u16 = 200;
     const image_height: u16 = 200;
-    const rectangle = try make_rect(image_width, image_height);
+    const bits_per_pixel: u8 = 24;
+    const rectangle = try make_rect(@as(u32, image_width), @as(u32, image_height), @as(u32, bits_per_pixel), allocator);
+
     defer std.heap.page_allocator.free(rectangle);
 
     const image_spec = TgaImageSpec{
@@ -31,7 +41,7 @@ pub fn main() !void {
         .y_origin = 0,
         .image_width = image_width,
         .image_height = image_height,
-        .pixel_depth = 24,
+        .pixel_depth = bits_per_pixel,
         .image_descriptor = 0,
     };
 
